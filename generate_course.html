@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gift Tracker</title>
+    <link rel="icon" href="favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            text-align: center;
+            padding: 50px;
+            background-color: #e6e7e8;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 5px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+            margin: 5px;
+        }
+        #nameList {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            text-align: left;
+        }
+        .column {
+            max-width: 300px;
+            margin: 0 10px;
+        }
+        .nameRow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+        .buttons {
+            display: flex;
+            gap: 5px; /* Space between buttons */
+        }
+        #calledNamesMessage {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #recentlyCalledNames {
+            font-size: 50px;
+            font-weight: 700;
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; /* Space between blocks */
+            justify-content: center;
+        }
+        .nameBlock {
+            background-color: #0F5146;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px 15px;
+            font-size: 50px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            color: white;
+        }
+        #calledNamesList {
+            margin-top: 20px;
+            text-align: center;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        img {
+            height: 100px;
+            width: auto;
+        }
+    </style>
+</head>
+<body>
+    <img src="preface.png" alt="Preface Logo">
+    <br>
+
+    <div id="nameInputContainer">
+        <input type="text" id="nameInput" placeholder="Enter name">
+        <div>
+            <button id="giftButton">Brought Gift</button>
+            <button id="noGiftButton">No Gift</button>
+        </div>
+    </div>
+    <hr>
+    <div id="nameList">
+        <div class="column" id="giftList">
+            <h3>Gift Given</h3>
+        </div>
+        <div class="column" id="noGiftList">
+            <h3>No Gift</h3>
+        </div>
+    </div>
+    <hr>
+    <button id="randomCallButton">Generate Names</button>
+    <button id="clearButton">Clear Called Names</button>
+    <div id="calledNamesMessage"></div>
+    <div id="recentlyCalledNames"></div>
+    <div id="calledNamesList"></div>
+
+    <script>
+        let names = JSON.parse(localStorage.getItem('giftTrackerNames')) || [];
+        let calledNames = JSON.parse(localStorage.getItem('calledNames')) || [];
+
+        document.getElementById('giftButton').addEventListener('click', function() {
+            const nameInput = document.getElementById('nameInput').value.trim();
+            if (nameInput && !names.some(n => n.name === nameInput)) {
+                const capitalized = nameInput.charAt(0).toUpperCase() + nameInput.slice(1);
+                names.push({ name: capitalized, gift: true });
+                document.getElementById('nameInput').value = '';
+                updateNameList();
+                saveData();
+            } else {
+                alert('Name is either empty or already added.');
+            }
+        });
+
+        document.getElementById('noGiftButton').addEventListener('click', function() {
+            const nameInput = document.getElementById('nameInput').value.trim();
+            if (nameInput && !names.some(n => n.name === nameInput)) {
+                const capitalized = nameInput.charAt(0).toUpperCase() + nameInput.slice(1);
+                names.push({ name: capitalized, gift: false });
+                document.getElementById('nameInput').value = '';
+                updateNameList();
+                saveData();
+            } else {
+                alert('Name is either empty or already added.');
+            }
+        });
+
+        document.getElementById('randomCallButton').addEventListener('click', function() {
+            const eligibleNames = names.filter(n => n.gift && !calledNames.includes(n.name));
+            const messageDiv = document.getElementById('calledNamesMessage');
+
+            if (eligibleNames.length === 0) {
+                messageDiv.innerHTML = "<p>All names have been called.</p>";
+                document.getElementById('recentlyCalledNames').innerHTML = '';
+                return;
+            }
+
+            const selectedNames = [];
+            while (selectedNames.length < 3 && eligibleNames.length > 0) {
+                const randomIndex = Math.floor(Math.random() * eligibleNames.length);
+                const calledName = eligibleNames[randomIndex].name;
+                if (!selectedNames.includes(calledName)) {
+                    selectedNames.push(calledName);
+                    calledNames.push(calledName); // Track called names
+                }
+                eligibleNames.splice(randomIndex, 1); // Remove to avoid duplicates
+            }
+
+            updateCalledNamesList();
+            saveData();
+            document.getElementById('recentlyCalledNames').innerHTML = selectedNames.map(name => `<div class="nameBlock">${name}</div>`).join('');
+            messageDiv.innerHTML = "";
+        });
+
+        document.getElementById('clearButton').addEventListener('click', function() {
+            // Clear the called names array
+            calledNames = [];
+            saveData(); // Update localStorage to reflect this change
+
+            // Clear the display of called names
+            updateCalledNamesList();
+            document.getElementById('recentlyCalledNames').innerHTML = '';
+            document.getElementById('calledNamesMessage').innerHTML = '';
+        });
+
+        function updateNameList() {
+            const giftListDiv = document.getElementById('giftList');
+            const noGiftListDiv = document.getElementById('noGiftList');
+
+            giftListDiv.innerHTML = '<h3>Gift Given</h3>' + names.filter(n => n.gift)
+                .map((n, index) => `
+                    <div class="nameRow">
+                        <span>${n.name}</span>
+                        <div class="buttons">
+                            <button onclick="editName(${index})">Edit</button>
+                            <button onclick="removeName(${index})">Remove</button>
+                        </div>
+                    </div>
+                `).join('');
+            noGiftListDiv.innerHTML = '<h3>No Gift</h3>' + names.filter(n => !n.gift)
+                .map((n, index) => `
+                    <div class="nameRow">
+                        <span>${n.name}</span>
+                        <div class="buttons">
+                            <button onclick="editName(${index})">Edit</button>
+                            <button onclick="removeName(${index})">Remove</button>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function updateCalledNamesList() {
+            const calledNamesListDiv = document.getElementById('calledNamesList');
+            calledNamesListDiv.innerHTML = '<h3>Called Names:</h3>' + calledNames.slice().reverse().map(name =>
+                `<div>${name}</div>`).join('');
+        }
+
+        function removeName(index) {
+            names.splice(index, 1);
+            updateNameList();
+            saveData();
+        }
+
+        function editName(index) {
+            const newName = prompt("Edit name:", names[index].name);
+            if (newName) {
+                names[index].name = newName.charAt(0).toUpperCase() + newName.slice(1);
+                updateNameList();
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('giftTrackerNames', JSON.stringify(names));
+            localStorage.setItem('calledNames', JSON.stringify(calledNames));
+        }
+
+        // Initialize the name lists on page load
+        updateNameList();
+        updateCalledNamesList();
+    </script>
+</body>
+</html>
